@@ -1,16 +1,19 @@
 import curses
+import sys
 from buffer import TextBuffer
 
 CTRL_Q_KEY = 17 
+CTRL_S_KEY = 19
 ENTER_KEY = 10
 BACKSPACE_KEY = 8
 DELETE_KEY = 127
 ARROW_KEYS = (curses.KEY_UP, curses.KEY_DOWN, curses.KEY_LEFT, curses.KEY_RIGHT)
 DELETION_KEYS = (BACKSPACE_KEY, DELETE_KEY, curses.KEY_BACKSPACE)
 class Editor:
-    def __init__(self, stdscr):
+    def __init__(self, stdscr, filename):
         self.stdscr = stdscr
-        self.buffer = TextBuffer()
+        self.filename = filename
+        self.buffer = TextBuffer(filename)
         self.cursor_row = 0
         self.cursor_col = 0
 
@@ -24,6 +27,16 @@ class Editor:
 
             if key == CTRL_Q_KEY:
                 break
+            elif key == CTRL_S_KEY:
+                if not self.filename:
+                    self.filename = self.prompt_filename("Save as: ")
+                    if not self.filename:
+                        continue
+                self.buffer.save_file(self.filename)
+                max_y, _ = self.stdscr.getmaxyx()
+                self.stdscr.addstr(max_y - 1, 0, f"Saved to {self.filename}".ljust(60))
+                self.stdscr.refresh()
+                curses.napms(800) 
             elif key in ARROW_KEYS:
                 self.move_cursor(key)
             elif key == ENTER_KEY:
@@ -31,14 +44,17 @@ class Editor:
                 self.cursor_row += 1
                 self.cursor_col = 0
             elif key in DELETION_KEYS:
-                if self.cursor_col == 0 and self.cursor_row > 0:
-                    prev_line_length = len(self.buffer.lines[self.cursor_row - 1])
-                self.buffer.delete_char(self.cursor_row, self.cursor_col)
-                if self.cursor_col > 0:
-                    self.cursor_col -= 1
-                else:
-                    self.cursor_row -= 1
-                    self.cursor_col = prev_line_length
+                if self.cursor_col == 0 and self.cursor_row == 0:
+                    continue
+                else: 
+                    if self.cursor_col == 0 and self.cursor_row > 0:
+                        prev_line_length = len(self.buffer.lines[self.cursor_row - 1])
+                    self.buffer.delete_char(self.cursor_row, self.cursor_col)
+                    if self.cursor_col > 0:
+                        self.cursor_col -= 1
+                    else:
+                        self.cursor_row -= 1
+                        self.cursor_col = prev_line_length
             else:
                 if 32 <= key <= 126:
                     char = chr(key)
@@ -70,7 +86,7 @@ class Editor:
         elif key == curses.KEY_RIGHT:
             if self.cursor_col < len(self.buffer.lines[self.cursor_row]):
                 self.cursor_col += 1
-            else:
+            elif self.cursor_row < len(self.buffer.lines) - 1:
                 self.cursor_row += 1
                 self.cursor_col = 0
 
@@ -81,8 +97,29 @@ class Editor:
 
         # TODO: left at col 0 moves to previous line, right at end moves to next
 
+    def prompt_filename(self, prompt_text="Save as: "):
+        curses.echo()  # show typed characters
+        max_y, _ = self.stdscr.getmaxyx()
+
+        # Clear last line
+        self.stdscr.move(max_y - 1, 0)
+        self.stdscr.clrtoeol()
+
+        # Show prompt
+        self.stdscr.addstr(max_y - 1, 0, prompt_text)
+        self.stdscr.refresh()
+
+        # Read input from user
+        filename = self.stdscr.getstr(max_y - 1, len(prompt_text), 100)
+        curses.noecho()
+
+        # Convert from bytes to str
+        return filename.decode("utf-8").strip()
+
+
 def main(stdscr):
-    Editor(stdscr).run()
+    filename = sys.argv[1] if len(sys.argv) > 1 else None
+    Editor(stdscr, filename).run()
 
 if __name__ == "__main__":
     curses.wrapper(main)
