@@ -1,5 +1,7 @@
-This is a line of text.
+﻿This is a line of text.
 We want this to show up in our test.
 Shorter line.
-Longer line.
+Longe
+few'fwefnwefwfe
+wefwefwfr line.
 The word longer is shorter than the word shorter.
