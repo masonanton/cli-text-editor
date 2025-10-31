@@ -1,21 +1,29 @@
 import curses
 import sys
 from buffer import TextBuffer
+from commands import NewLineCommand, DeleteCharCommand, InsertCharCommand
+from history import History
 
 CTRL_Q_KEY = 17 
 CTRL_S_KEY = 19
+CTRL_Z_KEY = 26
+CTRL_Y_KEY = 25
 ENTER_KEY = 10
 BACKSPACE_KEY = 8
 DELETE_KEY = 127
 ARROW_KEYS = (curses.KEY_UP, curses.KEY_DOWN, curses.KEY_LEFT, curses.KEY_RIGHT)
 DELETION_KEYS = (BACKSPACE_KEY, DELETE_KEY, curses.KEY_BACKSPACE)
+#TODO: refactor. maybe everything is an action where we pass in the key stroke, 
+# and then use a factory pattern
 class Editor:
     def __init__(self, stdscr, filename):
         self.stdscr = stdscr
         self.filename = filename
         self.buffer = TextBuffer(filename)
+        #TODO: make cursor a class
         self.cursor_row = 0
         self.cursor_col = 0
+        self.history = History()
 
     def run(self):
         curses.curs_set(1) # show the cursor
@@ -40,26 +48,28 @@ class Editor:
             elif key in ARROW_KEYS:
                 self.move_cursor(key)
             elif key == ENTER_KEY:
-                self.buffer.insert_newline(self.cursor_row, self.cursor_col)
-                self.cursor_row += 1
-                self.cursor_col = 0
+                cmd = NewLineCommand(self.cursor_row, self.cursor_col)
+                self.cursor_row, self.cursor_col = cmd.do(self.buffer)
+                self.history.record(cmd)
             elif key in DELETION_KEYS:
                 if self.cursor_col == 0 and self.cursor_row == 0:
                     continue
-                else: 
-                    if self.cursor_col == 0 and self.cursor_row > 0:
-                        prev_line_length = len(self.buffer.lines[self.cursor_row - 1])
-                    self.buffer.delete_char(self.cursor_row, self.cursor_col)
-                    if self.cursor_col > 0:
-                        self.cursor_col -= 1
-                    else:
-                        self.cursor_row -= 1
-                        self.cursor_col = prev_line_length
-            else:
-                if 32 <= key <= 126:
-                    char = chr(key)
-                    self.buffer.insert_char(self.cursor_row, self.cursor_col, char)
-                    self.cursor_col += 1
+                cmd = DeleteCharCommand(self.cursor_row, self.cursor_col)
+                self.cursor_row, self.cursor_col = cmd.do(self.buffer)
+                self.history.record(cmd)
+            elif 32 <= key <= 126:
+                char = chr(key)
+                cmd = InsertCharCommand(self.cursor_row, self.cursor_col, char)
+                self.cursor_row, self.cursor_col = cmd.do(self.buffer)
+                self.history.record(cmd)
+            elif key == CTRL_Z_KEY:
+                new_row, new_col = self.history.undo(self.buffer)
+                if (new_row, new_col) != (-1, -1):
+                    self.cursor_row, self.cursor_col = new_row, new_col
+            elif key == CTRL_Y_KEY:
+                new_row, new_col = self.history.redo(self.buffer)
+                if (new_row, new_col) != (-1, -1):
+                    self.cursor_row, self.cursor_col = new_row, new_col
 
     def render(self):
         self.stdscr.clear()
@@ -94,8 +104,6 @@ class Editor:
         current_line = self.buffer.lines[self.cursor_row]
         if self.cursor_col > len(current_line):
             self.cursor_col = len(current_line)
-
-        # TODO: left at col 0 moves to previous line, right at end moves to next
 
     def prompt_filename(self, prompt_text="Save as: "):
         curses.echo()  # show typed characters

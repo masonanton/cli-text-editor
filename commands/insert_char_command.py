@@ -8,9 +8,11 @@ class InsertCharCommand(Command):
 
     def do(self, buffer):
         buffer.insert_char(self.row, self.col, self.char)
+        return (self.row, self.col + 1)
 
     def undo(self, buffer):
-        buffer.delete_char(self.row, self.col)
+        buffer.delete_char(self.row, self.col + 1)
+        return (self.row, self.col)
 
 
 

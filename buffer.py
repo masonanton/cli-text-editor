@@ -10,13 +10,23 @@ class TextBuffer:
         self.lines[row] = line[:col] + char + line[col:]
 
     def delete_char(self, row, col):
+        # Case 1: delete within the same line
         if col > 0:
             line = self.lines[row]
+            deleted_char = line[col - 1]
             self.lines[row] = line[:col - 1] + line[col:]
+            return deleted_char
+
+        # Case 2: at start of line, merge with previous
         elif row > 0:
-            prev = self.lines[row - 1]
-            self.lines[row - 1] = prev + self.lines[row]
+            prev_line = self.lines[row - 1]
+            deleted_char = "\n"
+            self.lines[row - 1] = prev_line + self.lines[row]
             del self.lines[row]
+            return deleted_char
+
+        return None
+
 
     def insert_newline(self, row, col):
         line = self.lines[row]

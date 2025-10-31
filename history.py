@@ -9,16 +9,18 @@ class History:
     
     def undo(self, buffer):
         if not self.undo_stack:
-            return
+            return (-1, -1)
         command = self.undo_stack.pop()
-        command.undo(buffer)
+        new_row, new_col = command.undo(buffer)
         self.redo_stack.append(command)
+        return new_row, new_col
     
     def redo(self, buffer):
         if not self.redo_stack:
-            return
+            return (-1, -1)
         command = self.redo_stack.pop()
-        command.do(buffer)
+        new_row, new_col = command.do(buffer)
         self.undo_stack.append(command)
+        return new_row, new_col
     
 
