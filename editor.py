@@ -1,10 +1,11 @@
 import curses
 import sys
-from buffer import TextBuffer
+from core.buffer import TextBuffer
 from commands import NewLineCommand, DeleteCharCommand, InsertCharCommand
-from history import History
-from keys import KEYS
-from cursor import Cursor
+from core.history import History
+from utils.keys import KEYS
+from core.cursor import Cursor
+from strategies.key import EnterKeyStrategy, InsertKeyStrategy, DeleteKeyStrategy, MoveKeyStrategy
 
 #TODO: refactor. maybe everything is an action where we pass in the key stroke, 
 # and then use a factory pattern
@@ -37,22 +38,13 @@ class Editor:
                 self.stdscr.refresh()
                 curses.napms(800) 
             elif key in KEYS["ARROWS"]:
-                self.cursor.move(key, self.buffer)
+                MoveKeyStrategy().execute(self, key)
             elif key == KEYS["ENTER"]:
-                cmd = NewLineCommand(self.cursor.row, self.cursor.col)
-                self.cursor.update(cmd.do(self.buffer))
-                self.history.record(cmd)
+                EnterKeyStrategy().execute(self)
             elif key in KEYS["DELETION"]:
-                if self.cursor.col == 0 and self.cursor.row == 0:
-                    continue
-                cmd = DeleteCharCommand(self.cursor.row, self.cursor.col)
-                self.cursor.update(cmd.do(self.buffer))
-                self.history.record(cmd)
+                DeleteKeyStrategy().execute(self)
             elif 32 <= key <= 126:
-                char = chr(key)
-                cmd = InsertCharCommand(self.cursor.row, self.cursor.col, char)
-                self.cursor.update(cmd.do(self.buffer))
-                self.history.record(cmd)
+                InsertKeyStrategy().execute(self, key)
             elif key == KEYS["CTRL_Z"]:
                 new_location = self.history.undo(self.buffer)
                 if new_location != (-1, -1):
