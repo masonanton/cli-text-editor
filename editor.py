@@ -6,6 +6,7 @@ from core.history import History
 from utils.keys import KEYS
 from core.cursor import Cursor
 from strategies.key import EnterKeyStrategy, InsertKeyStrategy, DeleteKeyStrategy, MoveKeyStrategy
+from strategies.ctrl import UndoCtrlKeyStrategy, RedoCtrlKeyStrategy, SaveCtrlKeyStrategy
 
 #TODO: refactor. maybe everything is an action where we pass in the key stroke, 
 # and then use a factory pattern
@@ -28,14 +29,7 @@ class Editor:
             if key == KEYS["CTRL_Q"]:
                 break
             elif key == KEYS["CTRL_S"]:
-                if not self.filename:
-                    self.filename = self.prompt_filename("Save as: ")
-                    if not self.filename:
-                        continue
-                self.buffer.save_file(self.filename)
-                max_y, _ = self.stdscr.getmaxyx()
-                self.stdscr.addstr(max_y - 1, 0, f"Saved to {self.filename}".ljust(60))
-                self.stdscr.refresh()
+                SaveCtrlKeyStrategy().execute(self)
                 curses.napms(800) 
             elif key in KEYS["ARROWS"]:
                 MoveKeyStrategy().execute(self, key)
@@ -46,13 +40,9 @@ class Editor:
             elif 32 <= key <= 126:
                 InsertKeyStrategy().execute(self, key)
             elif key == KEYS["CTRL_Z"]:
-                new_location = self.history.undo(self.buffer)
-                if new_location != (-1, -1):
-                    self.cursor.update(new_location)
+                UndoCtrlKeyStrategy().execute(self)
             elif key == KEYS["CTRL_Y"]:
-                new_location = self.history.redo(self.buffer)
-                if new_location != (-1, -1):
-                    self.cursor.update(new_location)
+                RedoCtrlKeyStrategy().execute(self)
 
     def render(self):
         self.stdscr.clear()
