@@ -8,6 +8,7 @@ KEYS = {
     "ENTER": 10,
     "BACKSPACE": 8,
     "DELETE": 127,
+    "TAB": 9,
     "ARROWS": (
         curses.KEY_UP,
         curses.KEY_DOWN,

@@ -4,6 +4,7 @@ from core.buffer import TextBuffer
 from commands import NewLineCommand, DeleteCharCommand, InsertCharCommand
 from core.history import History
 from utils.keys import KEYS
+from utils.words import english_words
 from core.cursor import Cursor
 from strategies.key import EnterKeyStrategy, InsertKeyStrategy, DeleteKeyStrategy, MoveKeyStrategy
 from strategies.ctrl import UndoCtrlKeyStrategy, RedoCtrlKeyStrategy, SaveCtrlKeyStrategy
@@ -17,10 +18,15 @@ class Editor:
         self.buffer = TextBuffer(filename)
         self.cursor = Cursor()
         self.history = History()
+        self.ghost_text = ""
+        self.word_cache = {}
 
     def run(self):
         curses.curs_set(1) # show the cursor
         self.stdscr.keypad(True)
+        curses.start_color()
+        curses.use_default_colors()
+        curses.init_pair(1, 8, -1)
 
         while True:
             self.render()
@@ -43,16 +49,32 @@ class Editor:
                 UndoCtrlKeyStrategy().execute(self)
             elif key == KEYS["CTRL_Y"]:
                 RedoCtrlKeyStrategy().execute(self)
+            
+            prev_word = self.buffer.get_word_before_cursor(self.cursor.row, self.cursor.col)
+            self.ghost_text = self.autocomplete(prev_word) if prev_word else ""
 
     def render(self):
         self.stdscr.clear()
 
-        # TODO: draw buffer.text (list of lines)
         for i, line in enumerate(self.buffer.lines):
             self.stdscr.addstr(i, 0, line)
+
+        if self.ghost_text:
+            self.stdscr.addstr(self.cursor.row, self.cursor.col, self.ghost_text, curses.color_pair(1))
         
         self.stdscr.move(self.cursor.row, self.cursor.col)
         self.stdscr.refresh()
+
+    def autocomplete(self, prev_word):
+        if prev_word in self.word_cache:
+            word = self.word_cache[prev_word]
+        else:
+            word = next((w for w in english_words if w.startswith(prev_word) and w != prev_word), "")
+            self.word_cache[prev_word] = word
+
+        if word:
+            return word[len(prev_word):] 
+        return ""
 
     def prompt_filename(self, prompt_text="Save as: "):
         curses.echo()  # show typed characters

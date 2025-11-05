@@ -49,3 +49,15 @@ class TextBuffer:
 
     def get_prev_line_length(self, row):
         return len(self.lines[row - 1])
+    
+    def get_word_before_cursor(self, row, col):
+        if row < 0 or row >= len(self.lines):
+            return ""
+
+        line = self.lines[row][:col]
+
+        if not line or line[-1].isspace():
+            return ""
+
+        parts = line.split()
+        return parts[-1].lower() if parts else ""

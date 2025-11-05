@@ -1,1 +1,3 @@
 windows-curses
+english-words
+wordfreq
