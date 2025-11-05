@@ -1,5 +1,6 @@
 import curses
 import sys
+import config
 from core.buffer import TextBuffer
 from commands import NewLineCommand, DeleteCharCommand, InsertCharCommand
 from core.history import History
@@ -8,9 +9,6 @@ from utils.words import english_words
 from core.cursor import Cursor
 from strategies.key import EnterKeyStrategy, InsertKeyStrategy, DeleteKeyStrategy, MoveKeyStrategy
 from strategies.ctrl import UndoCtrlKeyStrategy, RedoCtrlKeyStrategy, SaveCtrlKeyStrategy
-
-#TODO: refactor. maybe everything is an action where we pass in the key stroke, 
-# and then use a factory pattern
 class Editor:
     def __init__(self, stdscr, filename):
         self.stdscr = stdscr
@@ -27,6 +25,7 @@ class Editor:
         curses.start_color()
         curses.use_default_colors()
         curses.init_pair(1, 8, -1)
+        _, config.MAX_WIDTH = self.stdscr.getmaxyx()
 
         while True:
             self.render()

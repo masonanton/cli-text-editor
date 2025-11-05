@@ -1,3 +1,4 @@
+from config import MAX_WIDTH
 class TextBuffer:
     def __init__(self, filename = None):
         self.lines = [""]
@@ -8,6 +9,14 @@ class TextBuffer:
     def insert_char(self, row, col, char):
         line = self.lines[row]
         self.lines[row] = line[:col] + char + line[col:]
+
+        if len(self.lines[row]) > MAX_WIDTH:
+            overflow = self.lines[row][MAX_WIDTH:]
+            self.lines[row] = self.lines[row][:MAX_WIDTH]
+            self.lines.insert(row + 1, overflow)
+            return len(overflow)
+        else:
+            return 0
 
     def delete_char(self, row, col):
         # Case 1: delete within the same line
